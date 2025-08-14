@@ -298,6 +298,19 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
       -Wl,--exclude-libs,ALL
   )
 
+  # For ARM64 cross-compilation, ensure proper sysroot is used
+  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" AND DEFINED ENV{CC})
+    # When cross-compiling, use the cross-compiler's sysroot
+    execute_process(
+      COMMAND $ENV{CC} -print-sysroot
+      OUTPUT_VARIABLE CROSS_SYSROOT
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(CROSS_SYSROOT)
+      set(CMAKE_SYSROOT ${CROSS_SYSROOT})
+    endif()
+  endif()
+
   if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     # LTO optimizations for GCC (from common.gypi Release + Linux conditions)
     target_compile_options(
