@@ -2,8 +2,7 @@ name: Prebuild (Bare)
 on:
   workflow_dispatch:
   push:
-    tags:
-      - 'v*'
+
 jobs:
   prebuild:
     strategy:
