@@ -246,6 +246,14 @@ if(WIN32)
     )
   endif()
 
+  # Windows system libraries required by Signal Rust extension
+  target_link_libraries(
+    ${signalapp__sqlcipher_node}
+    PRIVATE
+      bcrypt      # For BCryptGenRandom 
+      ntdll       # For NtWriteFile, RtlNtStatusToDosError
+  )
+
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
   # Android-specific settings (cross-compilation with NDK)
   target_link_options(
