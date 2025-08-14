@@ -10,21 +10,78 @@ project(sqlcipher C CXX)
 
 bare_target(target)
 
-# Find OpenSSL (required for SQLCipher)
-# For cross-compilation targets (like Android), OpenSSL might not be available via find_package
-if(CMAKE_CROSSCOMPILING AND ANDROID)
-  # For Android builds, we'll rely on the system's OpenSSL or bundled crypto
-  # Android NDK includes OpenSSL headers and libraries
-  set(OPENSSL_FOUND TRUE)
-  set(OPENSSL_INCLUDE_DIR "")  # Will use system headers
-  set(OPENSSL_LIBRARIES "ssl;crypto")  # Link against system OpenSSL
-else()
-  find_package(OpenSSL REQUIRED)
-endif()
+# Note: OpenSSL not needed - using Signal's custom crypto provider from Rust extension
 
 # Skip bare module for now - focus on Node.js build first
 # TODO: Research the correct plain C N-API approach for bare compatibility
 # add_bare_module(signalapp__sqlcipher_bare)
+
+# Determine Rust target triple based on platform and architecture
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+    set(RUST_TARGET "aarch64-apple-darwin")
+  else()
+    set(RUST_TARGET "x86_64-apple-darwin")
+  endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+    set(RUST_TARGET "aarch64-unknown-linux-gnu")
+  else()
+    set(RUST_TARGET "x86_64-unknown-linux-gnu")
+  endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64")
+    set(RUST_TARGET "aarch64-pc-windows-msvc")
+  else()
+    set(RUST_TARGET "x86_64-pc-windows-msvc")
+  endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+  if(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
+    set(RUST_TARGET "aarch64-linux-android")
+  elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64")
+    set(RUST_TARGET "x86_64-linux-android")
+  elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a")
+    set(RUST_TARGET "armv7-linux-androideabi")
+  else()
+    message(FATAL_ERROR "Unsupported Android architecture: ${CMAKE_ANDROID_ARCH_ABI}")
+  endif()
+else()
+  message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+# Set library prefix and extension based on platform
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set(RUST_LIB_PREFIX "")
+  set(RUST_LIB_EXT "lib")
+else()
+  set(RUST_LIB_PREFIX "lib")
+  set(RUST_LIB_EXT "a")
+endif()
+
+# Build Signal Rust extension
+set(EXTENSION_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/deps/extension/target/${RUST_TARGET}/release/${RUST_LIB_PREFIX}signal_sqlcipher_extension.${RUST_LIB_EXT})
+set(EXTENSION_HEADER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/deps/extension/target/signal-tokenizer.h)
+
+add_custom_command(
+  OUTPUT ${EXTENSION_LIB_PATH} ${EXTENSION_HEADER_PATH}
+  COMMAND ${CMAKE_COMMAND} -E env
+    MACOSX_DEPLOYMENT_TARGET=11.0
+    $<$<NOT:$<PLATFORM_ID:Windows>>:CFLAGS=-Wa,--noexecstack>
+    $<$<OR:$<STREQUAL:${RUST_TARGET},aarch64-apple-darwin>,$<STREQUAL:${RUST_TARGET},aarch64-unknown-linux-gnu>>:RUSTFLAGS=--cfg\ aes_armv8>
+    node cargo-wrap.js target/${RUST_TARGET}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/deps/extension
+  COMMENT "Building Signal Rust extension for target: ${RUST_TARGET}"
+)
+
+# Create custom target that depends on the Rust build
+add_custom_target(build_signal_extension DEPENDS ${EXTENSION_LIB_PATH} ${EXTENSION_HEADER_PATH})
+
+# Create imported library for the Rust extension
+add_library(signal_extension STATIC IMPORTED)
+set_target_properties(signal_extension PROPERTIES
+  IMPORTED_LOCATION ${EXTENSION_LIB_PATH}
+)
+add_dependencies(signal_extension build_signal_extension)
 
 # Create Node.js module
 add_napi_module(signalapp__sqlcipher_node)
@@ -44,14 +101,14 @@ target_include_directories(
     src
     deps/sqlcipher
     "${CMAKE_CURRENT_SOURCE_DIR}/node_modules/node-addon-api"
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/extension/target  # Signal extension header
 )
 
-# Link OpenSSL
+# Link Signal extension (provides crypto via custom provider)
 target_link_libraries(
   ${signalapp__sqlcipher_node}
   PRIVATE
-    OpenSSL::SSL
-    OpenSSL::Crypto
+    signal_extension
 )
 
 # SQLite/SQLCipher compiler definitions (from deps/sqlcipher/sqlcipher.gyp)
@@ -98,6 +155,7 @@ target_compile_definitions(
     SQLITE_SECURE_DELETE
     SQLITE_EXTRA_INIT=sqlcipher_extra_init
     SQLITE_EXTRA_SHUTDOWN=sqlcipher_extra_shutdown
+    SQLCIPHER_CRYPTO_CUSTOM=signal_crypto_provider_setup
     NAPI_VERSION=9
     NAPI_DISABLE_CPP_EXCEPTIONS
 )
@@ -247,6 +305,7 @@ if(CMAKE_PROJECT_VERSION AND CMAKE_PROJECT_VERSION MATCHES "profiling")
       SQLITE_ENABLE_STMT_SCANSTATUS
   )
 endif()
+
 
 # TODO: add optional dump_syms integration for release builds to generate .sym
 # files for debugging/crash reporting.
