@@ -36,14 +36,17 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(RUST_TARGET "x86_64-pc-windows-msvc")
   endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
-  if(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
+  # Try CMAKE_ANDROID_ARCH_ABI first, then fall back to CMAKE_SYSTEM_PROCESSOR
+  if(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
     set(RUST_TARGET "aarch64-linux-android")
-  elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64")
+  elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     set(RUST_TARGET "x86_64-linux-android")
-  elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a")
+  elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "armv7")
     set(RUST_TARGET "armv7-linux-androideabi")
+  elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "x86" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+    set(RUST_TARGET "i686-linux-android")
   else()
-    message(FATAL_ERROR "Unsupported Android architecture: ${CMAKE_ANDROID_ARCH_ABI}")
+    message(FATAL_ERROR "Unsupported Android architecture: CMAKE_ANDROID_ARCH_ABI=${CMAKE_ANDROID_ARCH_ABI}, CMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}")
   endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
   if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
@@ -242,6 +245,29 @@ if(WIN32)
         /EHsc  # Enable C++ exception handling (ExceptionHandling: 1)
     )
   endif()
+
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+  # Android-specific settings (cross-compilation with NDK)
+  target_link_options(
+    ${signalapp__sqlcipher_node}
+    PRIVATE
+      -Wl,-Bsymbolic
+      -Wl,--exclude-libs,ALL
+  )
+
+  # Android needs explicit C++ standard library linking
+  target_link_libraries(
+    ${signalapp__sqlcipher_node}
+    PRIVATE
+      c++_shared
+  )
+
+  # Remove problematic flags that break Android compilation
+  target_compile_options(
+    ${signalapp__sqlcipher_node}
+    PRIVATE
+      $<$<COMPILE_LANGUAGE:CXX>:-stdlib=libc++>
+  )
 
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   # Linux-specific settings (from binding.gyp and common.gypi)

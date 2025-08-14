@@ -79,6 +79,41 @@ jobs:
       - run: npm install -g bare-runtime bare-make
       - name: Install Rust target
         run: rustup target add ${{ matrix.rust_target }}
+      - name: Setup Android NDK
+        if: startsWith(matrix.platform, 'android')
+        run: |
+          # Android NDK is pre-installed on GitHub runners at /usr/local/lib/android/sdk/ndk/
+          # Find the latest NDK version
+          NDK_VERSION=$(ls /usr/local/lib/android/sdk/ndk/ | sort -V | tail -n1)
+          NDK_ROOT="/usr/local/lib/android/sdk/ndk/${NDK_VERSION}"
+          echo "NDK_ROOT=${NDK_ROOT}" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=${NDK_ROOT}" >> $GITHUB_ENV
+          
+          # Set up toolchain paths for Rust
+          case "${{ matrix.arch }}" in
+            "x64") 
+              ANDROID_TARGET="x86_64-linux-android"
+              CC_TARGET="x86_64-linux-android29-clang"
+              ;;
+            "ia32")
+              ANDROID_TARGET="i686-linux-android" 
+              CC_TARGET="i686-linux-android29-clang"
+              ;;
+            "arm64")
+              ANDROID_TARGET="aarch64-linux-android"
+              CC_TARGET="aarch64-linux-android29-clang"
+              ;;
+            "arm")
+              ANDROID_TARGET="armv7-linux-androideabi" 
+              CC_TARGET="armv7a-linux-androideabi29-clang"
+              ;;
+          esac
+          
+          # Set environment variables for Rust cross-compilation
+          echo "CC_${ANDROID_TARGET//-/_}=${NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${CC_TARGET}" >> $GITHUB_ENV
+          echo "CXX_${ANDROID_TARGET//-/_}=${NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${CC_TARGET}++" >> $GITHUB_ENV
+          echo "AR_${ANDROID_TARGET//-/_}=${NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" >> $GITHUB_ENV
+          echo "CARGO_TARGET_${ANDROID_TARGET^^//-/_}_LINKER=${NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/${CC_TARGET}" >> $GITHUB_ENV
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Generate build files
