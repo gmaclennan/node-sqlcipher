@@ -262,7 +262,16 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
       c++_shared
   )
 
-  # Remove problematic flags that break Android compilation
+  # Add C++ standard library include paths explicitly since -nostdinc++ is used
+  if(DEFINED ENV{ANDROID_NDK_ROOT})
+    target_include_directories(
+      ${signalapp__sqlcipher_node}
+      PRIVATE
+        "$ENV{ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1"
+    )
+  endif()
+
+  # Configure C++ stdlib for Android
   target_compile_options(
     ${signalapp__sqlcipher_node}
     PRIVATE
