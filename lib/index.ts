@@ -34,8 +34,10 @@ const addon = binding as Readonly<{
   statementClose(stmt: NativeStatement): void;
 
   databaseOpen(path: string): NativeDatabase;
+  databaseInitTokenizer(db: NativeDatabase): void;
   databaseExec(db: NativeDatabase, query: string): void;
   databaseClose(db: NativeDatabase): void;
+  signalTokenize(value: string): Array<string>;
 }>;
 
 export type RunResult = {
@@ -368,6 +370,13 @@ export default class Database {
     this.#isCacheEnabled = cacheStatements === true;
   }
 
+  public initTokenizer(): void {
+    if (this.#native === undefined) {
+      throw new Error('Database closed');
+    }
+    addon.databaseInitTokenizer(this.#native);
+  }
+
   /**
    * Execute one or multiple SQL statements in a given `sql` string.
    *
@@ -549,6 +558,22 @@ export default class Database {
         this.#transactionDepth -= 1;
       }
     };
+  }
+
+  /**
+   * Tokenize a given sentence with a Signal-FTS5-Extension.
+   *
+   * @param value - a sentence
+   * @returns a list of word-like tokens.
+   *
+   * @see {@link https://github.com/signalapp/Signal-FTS5-Extension}
+   */
+  public signalTokenize(value: string): Array<string> {
+    if (typeof value !== 'string') {
+      throw new TypeError('Invalid value');
+    }
+
+    return addon.signalTokenize(value);
   }
 }
 
