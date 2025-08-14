@@ -11,7 +11,16 @@ project(sqlcipher C CXX)
 bare_target(target)
 
 # Find OpenSSL (required for SQLCipher)
-find_package(OpenSSL REQUIRED)
+# For cross-compilation targets (like Android), OpenSSL might not be available via find_package
+if(CMAKE_CROSSCOMPILING AND ANDROID)
+  # For Android builds, we'll rely on the system's OpenSSL or bundled crypto
+  # Android NDK includes OpenSSL headers and libraries
+  set(OPENSSL_FOUND TRUE)
+  set(OPENSSL_INCLUDE_DIR "")  # Will use system headers
+  set(OPENSSL_LIBRARIES "ssl;crypto")  # Link against system OpenSSL
+else()
+  find_package(OpenSSL REQUIRED)
+endif()
 
 # Skip bare module for now - focus on Node.js build first
 # TODO: Research the correct plain C N-API approach for bare compatibility
