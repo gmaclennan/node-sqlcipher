@@ -276,6 +276,9 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
     ${signalapp__sqlcipher_node}
     PRIVATE
       $<$<COMPILE_LANGUAGE:CXX>:-stdlib=libc++>
+      # Make compiler less strict about type conversions for Android ARM compatibility  
+      $<$<COMPILE_LANGUAGE:CXX>:-Wno-ambiguous-overload>
+      $<$<COMPILE_LANGUAGE:CXX>:-fpermissive>
   )
 
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
