@@ -45,6 +45,14 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
   else()
     message(FATAL_ERROR "Unsupported Android architecture: ${CMAKE_ANDROID_ARCH_ABI}")
   endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  if(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+    set(RUST_TARGET "aarch64-apple-ios")
+  elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
+    set(RUST_TARGET "x86_64-apple-ios")
+  else()
+    message(FATAL_ERROR "Unsupported iOS architecture: ${CMAKE_OSX_ARCHITECTURES}")
+  endif()
 else()
   message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
@@ -85,6 +93,9 @@ add_dependencies(signal_extension build_signal_extension)
 
 # Create Node.js module
 add_napi_module(signalapp__sqlcipher_node)
+
+# Ensure Signal extension header is built before compiling C++ sources
+add_dependencies(${signalapp__sqlcipher_node} build_signal_extension)
 
 # SQLCipher source files
 target_sources(
