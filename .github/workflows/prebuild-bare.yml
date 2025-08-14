@@ -23,10 +23,6 @@ jobs:
             rust_target: x86_64-linux-android
           - os: ubuntu-22.04
             platform: android
-            arch: ia32
-            rust_target: i686-linux-android
-          - os: ubuntu-22.04
-            platform: android
             arch: arm64
             rust_target: aarch64-linux-android
           - os: ubuntu-22.04
@@ -94,10 +90,6 @@ jobs:
             "x64") 
               ANDROID_TARGET="x86_64-linux-android"
               CC_TARGET="x86_64-linux-android29-clang"
-              ;;
-            "ia32")
-              ANDROID_TARGET="i686-linux-android" 
-              CC_TARGET="i686-linux-android29-clang"
               ;;
             "arm64")
               ANDROID_TARGET="aarch64-linux-android"
