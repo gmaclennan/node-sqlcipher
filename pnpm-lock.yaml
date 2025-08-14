@@ -11,9 +11,6 @@ importers:
       node-addon-api:
         specifier: '*'
         version: 8.3.1
-      node-gyp-build:
-        specifier: ^4.8.4
-        version: 4.8.4
       require-addon:
         specifier: ^1.1.0
         version: 1.1.0
@@ -1265,10 +1262,6 @@ packages:
   node-addon-api@8.3.1:
     resolution: {integrity: sha512-lytcDEdxKjGJPTLEfW4mYMigRezMlyJY8W4wxJK8zE533Jlb8L8dRuObJFWg2P+AuOIxoCgKF+2Oq4d4Zd0OUA==}
     engines: {node: ^18 || ^20 || >= 21}
-
-  node-gyp-build@4.8.4:
-    resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
-    hasBin: true
 
   normalize-package-data@2.5.0:
     resolution: {integrity: sha512-/5CMN3T0R4XTj4DcGaexo+roZSdSFW/0AOOTROrjxzCG1wrWXEsGbRKevjlIL+ZDE4sZlJr5ED4YW0yqmkK+eA==}
@@ -3025,8 +3018,6 @@ snapshots:
   nice-try@1.0.5: {}
 
   node-addon-api@8.3.1: {}
-
-  node-gyp-build@4.8.4: {}
 
   normalize-package-data@2.5.0:
     dependencies:
