@@ -65,10 +65,10 @@ static Napi::Value SignalTokenize(const Napi::CallbackInfo& info) {
     NAPI_THROW(Napi::Error::New(env, "Failed to tokenize"), Napi::Value());
   }
 
-  auto result = Napi::Array::New(env, tokens.size());
+  auto result = Napi::Array::New(env, static_cast<uint32_t>(tokens.size()));
   int i = 0;
   for (auto& str : tokens) {
-    result[i++] = str.c_str();
+    result[static_cast<uint32_t>(i++)] = str.c_str();
   }
 
   return result;
@@ -551,14 +551,14 @@ Napi::Value Statement::Step(const Napi::CallbackInfo& info) {
   if (recompiled || cache.IsUndefined()) {
     result = Napi::Array::New(env, 2 * column_count);
     for (int i = 0; i < column_count; i++) {
-      result[i] = sqlite3_column_name(stmt->handle_, i);
+      result[static_cast<uint32_t>(i)] = sqlite3_column_name(stmt->handle_, i);
     }
   } else {
     result = cache.As<Napi::Array>();
   }
 
   for (int i = 0; i < column_count; i++) {
-    result[column_count + i] = stmt->GetColumnValue(env, i);
+    result[static_cast<uint32_t>(column_count + i)] = stmt->GetColumnValue(env, i);
   }
 
   return result;
@@ -696,7 +696,7 @@ bool Statement::BindParams(Napi::Env env, Napi::Value params) {
                    false);
       }
 
-      auto error = BindParam(env, i, list[i - 1]);
+      auto error = BindParam(env, i, list[static_cast<uint32_t>(i - 1)]);
       if (error != nullptr) {
         NAPI_THROW(
             FormatError(env, "Failed to bind param %d, error %s", i, error),
